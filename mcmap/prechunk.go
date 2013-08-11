@@ -1,0 +1,257 @@
+package mcmap
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"github.com/kch42/gonbt/nbt"
+	"time"
+)
+
+const (
+	_ = iota
+	compressGZip
+	compressZlib
+)
+
+type preChunk struct {
+	ts          time.Time
+	data        []byte
+	compression byte
+}
+
+var (
+	UnknownCompression = errors.New("Unknown chunk compression")
+)
+
+func halfbyte(b []byte, i int) byte {
+	if i%2 == 0 {
+		return b[i/2] & 0x0f
+	}
+	return (b[i/2] >> 4) & 0x0f
+}
+
+func extractCoord(tc nbt.TagCompound) (x, y, z int, err error) {
+	var _x, _y, _z int32
+	if _x, err = tc.GetInt("x"); err != nil {
+		return
+	}
+	if _y, err = tc.GetInt("y"); err != nil {
+		return
+	}
+	_z, err = tc.GetInt("z")
+	x, y, z = int(_x), int(_y), int(_z)
+	return
+}
+
+func (pc *preChunk) getLevelTag() (nbt.TagCompound, error) {
+	r := bytes.NewReader(pc.data)
+
+	var root nbt.Tag
+	var err error
+	switch pc.compression {
+	case compressGZip:
+		root, _, err = nbt.ReadGzipdNamedTag(r)
+	case compressZlib:
+		root, _, err = nbt.ReadZlibdNamedTag(r)
+	default:
+		err = UnknownCompression
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if root.Type != nbt.TAG_Compound {
+		return nil, errors.New("Root tag is not a TAG_Compound")
+	}
+
+	lvl, err := root.Payload.(nbt.TagCompound).GetCompound("Level")
+	if err != nil {
+		return nil, fmt.Errorf("Could not read Level tag: %s", err)
+	}
+
+	return lvl, nil
+}
+
+func (pc *preChunk) toChunk() (*Chunk, error) {
+	c := Chunk{ts: pc.ts}
+
+	lvl, err := pc.getLevelTag()
+	if err != nil {
+		return nil, err
+	}
+
+	c.x, err = lvl.GetInt("xPos")
+	if err != nil {
+		return nil, fmt.Errorf("Could not read xPos tag: %s", err)
+	}
+	c.z, err = lvl.GetInt("zPos")
+	if err != nil {
+		return nil, fmt.Errorf("Could not read zPos tag: %s", err)
+	}
+
+	c.lastUpdate, err = lvl.GetLong("LastUpdate")
+	if err != nil {
+		return nil, fmt.Errorf("Could not read LastUpdate tag: %s", err)
+	}
+
+	populated, err := lvl.GetByte("TerrainPopulated")
+	switch err {
+	case nil:
+	case nbt.NotFound:
+		populated = 1
+	default:
+		return nil, fmt.Errorf("Could not read TerrainPopulated tag: %s", err)
+	}
+	c.populated = (populated == 1)
+
+	c.inhabitatedTime, err = lvl.GetLong("InhabitedTime")
+	switch err {
+	case nil:
+	case nbt.NotFound:
+		c.inhabitatedTime = 0
+	default:
+		return nil, fmt.Errorf("Could not read InhabitatedTime tag: %s", err)
+	}
+
+	c.biomes = make([]Biome, 256)
+	biomes, err := lvl.GetByteArray("Biomes")
+	switch err {
+	case nil:
+		for i, bio := range biomes {
+			c.biomes[i] = Biome(bio)
+		}
+	case nbt.NotFound:
+		for i := 0; i < 256; i++ {
+			c.biomes[i] = BioUncalculated
+		}
+	default:
+		return nil, fmt.Errorf("Could not read Biomes tag: %s", err)
+	}
+
+	c.heightMap, err = lvl.GetIntArray("HeightMap")
+	if err != nil {
+		return nil, fmt.Errorf("Could not read HeightMap tag: %s", err)
+	}
+
+	ents, err := lvl.GetList("Entities")
+	if err != nil {
+		return nil, fmt.Errorf("Could not read Entities tag: %s", err)
+	}
+	if ents.Type != nbt.TAG_Compound {
+		c.Entities = []nbt.TagCompound{}
+	} else {
+		c.Entities = make([]nbt.TagCompound, len(ents.Elems))
+		for i, ent := range ents.Elems {
+			c.Entities[i] = ent.(nbt.TagCompound)
+		}
+	}
+
+	sections, err := lvl.GetList("Sections")
+	if (err != nil) || (sections.Type != nbt.TAG_Compound) {
+		return nil, fmt.Errorf("Could not read Section tag: %s", err)
+	}
+
+	c.blocks = make([]Block, 16*16*256)
+	for _, _section := range sections.Elems {
+		section := _section.(nbt.TagCompound)
+
+		y, err := section.GetByte("Y")
+		if err != nil {
+			return nil, fmt.Errorf("Could not read Section -> Y tag: %s", err)
+		}
+		off := int(y) * 4096
+
+		blocks, err := section.GetByteArray("Blocks")
+		if err != nil {
+			return nil, fmt.Errorf("Could not read Section -> Blocks tag: %s", err)
+		}
+		blocksAdd := make([]byte, 4096)
+		add, err := section.GetByteArray("Add")
+		switch err {
+		case nil:
+			for i := 0; i < 4096; i++ {
+				blocksAdd[i] = halfbyte(add, i)
+			}
+		case nbt.NotFound:
+		default:
+			return nil, fmt.Errorf("Could not read Section -> Add tag: %s", err)
+		}
+
+		blkData, err := section.GetByteArray("Data")
+		if err != nil {
+			return nil, fmt.Errorf("Could not read Section -> Data tag: %s", err)
+		}
+		blockLight, err := section.GetByteArray("BlockLight")
+		if err != nil {
+			return nil, fmt.Errorf("Could not read Section -> BlockLight tag: %s", err)
+		}
+		skyLight, err := section.GetByteArray("SkyLight")
+		if err != nil {
+			return nil, fmt.Errorf("Could not read Section -> SkyLight tag: %s", err)
+		}
+
+		for i := 0; i < 4096; i++ {
+			c.blocks[off+i] = Block{
+				ID:         BlockID(uint16(blocks[i]) | (uint16(blocksAdd[i]) << 8)),
+				Data:       halfbyte(blkData, i),
+				BlockLight: halfbyte(blockLight, i),
+				SkyLight:   halfbyte(skyLight, i)}
+		}
+	}
+
+	tileEnts, err := lvl.GetList("TileEntities")
+	if err != nil {
+		return nil, fmt.Errorf("Could not read TileEntities tag: %s", err)
+	}
+	if tileEnts.Type == nbt.TAG_Compound {
+		for _, _tEnt := range tileEnts.Elems {
+			tEnt := _tEnt.(nbt.TagCompound)
+			x, y, z, err := extractCoord(tEnt)
+			if err != nil {
+				return nil, fmt.Errorf("Could not Extract coords: %s", err)
+			}
+
+			_, _, x, z = BlockToChunk(x, z)
+
+			c.blocks[calcBlockOffset(x, y, z)].TileEntity = tEnt
+		}
+	}
+
+	tileTicks, err := lvl.GetList("TileTicks")
+	if (err == nil) && (tileTicks.Type == nbt.TAG_Compound) {
+		for _, _tTick := range tileTicks.Elems {
+			tTick := _tTick.(nbt.TagCompound)
+			x, y, z, err := extractCoord(tTick)
+			if err != nil {
+				return nil, fmt.Errorf("Could not Extract coords: %s", err)
+			}
+
+			_, _, x, z = BlockToChunk(x, z)
+
+			x %= 16
+			z %= 16
+
+			tick := TileTick{}
+			if tick.i, err = tTick.GetInt("i"); err != nil {
+				return nil, fmt.Errorf("Could not read i of a TileTag tag: %s", err)
+			}
+			if tick.t, err = tTick.GetInt("t"); err != nil {
+				return nil, fmt.Errorf("Could not read t of a TileTag tag: %s", err)
+			}
+			switch tick.p, err = tTick.GetInt("p"); err {
+			case nil:
+				tick.hasP = true
+			case nbt.NotFound:
+				tick.hasP = false
+			default:
+				return nil, fmt.Errorf("Could not read p of a TileTag tag: %s", err)
+			}
+
+			c.blocks[calcBlockOffset(x, y, z)].Tick = &tick
+		}
+	}
+
+	return &c, nil
+}
