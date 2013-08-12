@@ -176,6 +176,7 @@ func (reg *Region) cleanSuperchunks(forceSave bool) error {
 	return nil
 }
 
+// Chunk returns the chunk at x, z. If no chunk could be found, the error NotAvailable will be returned. Other errors indicate an internal error (I/O error, file format violated, ...)
 func (reg *Region) Chunk(x, z int) (*Chunk, error) {
 	scx, scz, cx, cz := chunkToSuperchunk(x, z)
 	scPos := XZPos{scx, scz}

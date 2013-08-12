@@ -1,3 +1,4 @@
+// replace replaces all iron blocks with diamond blocks.
 package main
 
 import (

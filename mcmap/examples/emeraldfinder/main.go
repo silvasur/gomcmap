@@ -1,3 +1,4 @@
+// emeraldfinder is a gomcmap demo program to find emerald ores in a Minecraft map.
 package main
 
 import (

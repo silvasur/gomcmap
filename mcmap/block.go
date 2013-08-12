@@ -10,7 +10,7 @@ type Block struct {
 	ID                   BlockID
 	Data                 byte            // Actually only a half-byte.
 	BlockLight, SkyLight byte            // Also, only half-bytes.
-	TileEntity           nbt.TagCompound // The x, y and z values in here can be ignored, will automatically be fixed on saving.
+	TileEntity           nbt.TagCompound // The x, y and z values in here can be ignored, will automatically be fixed on saving. Will be nil, if no TileEntity is available.
 	Tick                 *TileTick       // If nil, no TileTick info is available for this block
 }
 

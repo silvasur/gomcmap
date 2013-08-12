@@ -1,3 +1,4 @@
+// mapper is a very simple map renderer.
 package main
 
 import (
