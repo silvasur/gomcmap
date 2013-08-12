@@ -110,4 +110,22 @@ func (c *Chunk) SetBiome(x, z int, bio Biome) { c.biomes[x*ChunkSizeXZ+z] = bio 
 // If the chunk was modified, call MarkModified BEFORE.
 func (c *Chunk) MarkUnused() error { return c.reg.unloadChunk(int(c.x), int(c.z)) }
 
-// TODO: func (c *Chunk) RecalcHeightMap()
+// RecalcHeightMap recalculates the internal height map.
+//
+// You should use this function before marking the chunk as unused, if you modified the chunk
+// (unless you know, your changes wouldn't affect the height map).
+func (c *Chunk) RecalcHeightMap() {
+	i := 0
+	for z := 0; z < ChunkSizeXZ; z++ {
+		for x := 0; x < ChunkSizeXZ; x++ {
+			for y := ChunkSizeY; y >= 0; y-- {
+				blkid := c.blocks[calcBlockOffset(x, y, z)].ID
+				if (blkid != BlkAir) && (blkid != BlkGlass) && (blkid != BlkGlassPane) {
+					c.heightMap[i] = int32(y)
+					break
+				}
+			}
+			i++
+		}
+	}
+}
