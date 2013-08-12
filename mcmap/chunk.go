@@ -84,4 +84,10 @@ func (c *Chunk) Height(x, z int) int {
 	return int(c.heightMap[z*16+x])
 }
 
+// Biome gets the Biome at x,z.
+func (c *Chunk) Biome(x, z int) Biome { return c.biomes[x*16+z] }
+
+// SetBiome sets the biome at x,z.
+func (c *Chunk) SetBiome(x, z int, bio Biome) { c.biomes[x*16+z] = bio }
+
 // TODO: func (c *Chunk) RecalcHeightMap()
