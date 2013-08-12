@@ -37,17 +37,12 @@ chunkLoop:
 		}
 
 		modified := false
-		for y := 0; y < mcmap.ChunkSizeY; y++ {
-			for x := 0; x < mcmap.ChunkSizeXZ; x++ {
-				for z := 0; z < mcmap.ChunkSizeXZ; z++ {
-					blk := chunk.Block(x, y, z)
-					if blk.ID == mcmap.BlkBlockOfIron {
-						blk.ID = mcmap.BlkBlockOfDiamond
-						modified = true
-					}
-				}
+		chunk.Iter(func(x, y, z int, blk *mcmap.Block) {
+			if blk.ID == mcmap.BlkBlockOfIron {
+				blk.ID = mcmap.BlkBlockOfDiamond
+				modified = true
 			}
-		}
+		})
 
 		if modified {
 			fmt.Printf("Modified chunk %d, %d.\n", cx, cz)

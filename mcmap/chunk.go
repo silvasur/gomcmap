@@ -86,6 +86,17 @@ func (c *Chunk) Height(x, z int) int {
 	return int(c.heightMap[z*ChunkSizeXZ+x])
 }
 
+// Iter iterates ofer all blocks of this chunk and calls the function fx with the coords (x,y,z) and a pointer to the block.
+func (c *Chunk) Iter(fx func(int, int, int, *Block)) {
+	for x := 0; x < ChunkSizeXZ; x++ {
+		for y := 0; y < ChunkSizeY; y++ {
+			for z := 0; z < ChunkSizeXZ; z++ {
+				fx(x, y, z, &(c.blocks[calcBlockOffset(x, y, z)]))
+			}
+		}
+	}
+}
+
 // Biome gets the Biome at x,z.
 func (c *Chunk) Biome(x, z int) Biome { return c.biomes[x*ChunkSizeXZ+z] }
 

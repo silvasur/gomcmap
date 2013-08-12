@@ -36,17 +36,12 @@ chunkLoop:
 			os.Exit(1)
 		}
 
-		for y := 0; y < mcmap.ChunkSizeY; y++ {
-			for x := 0; x < mcmap.ChunkSizeXZ; x++ {
-				for z := 0; z < mcmap.ChunkSizeXZ; z++ {
-					blk := chunk.Block(x, y, z)
-					if blk.ID == mcmap.BlkEmeraldOre {
-						absx, absz := mcmap.ChunkToBlock(cx, cz, x, z)
-						fmt.Printf("%d, %d, %d\n", absx, y, absz)
-					}
-				}
+		chunk.Iter(func(x, y, z int, blk *mcmap.Block) {
+			if blk.ID == mcmap.BlkEmeraldOre {
+				absx, absz := mcmap.ChunkToBlock(cx, cz, x, z)
+				fmt.Printf("%d, %d, %d\n", absx, y, absz)
 			}
-		}
+		})
 
 		chunk.MarkUnused()
 	}
