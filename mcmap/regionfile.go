@@ -57,8 +57,8 @@ func readRegionFile(r io.ReadSeeker) (map[XZPos]*preChunk, error) {
 
 	offs := make(map[XZPos]*chunkOffTs)
 
-	for z := 0; z < 32; z++ {
-		for x := 0; x < 32; x++ {
+	for z := 0; z < superchunkSizeXZ; z++ {
+		for x := 0; x < superchunkSizeXZ; x++ {
 			var location uint32
 			if err := binary.Read(r, binary.BigEndian, &location); err != nil {
 				return nil, err
@@ -75,8 +75,8 @@ func readRegionFile(r io.ReadSeeker) (map[XZPos]*preChunk, error) {
 		}
 	}
 
-	for z := 0; z < 32; z++ {
-		for x := 0; x < 32; x++ {
+	for z := 0; z < superchunkSizeXZ; z++ {
+		for x := 0; x < superchunkSizeXZ; x++ {
 			pos := XZPos{x, z}
 
 			var ts int32
@@ -119,7 +119,7 @@ func (pc *preChunk) writePreChunk(w io.Writer) error {
 func writeRegionFile(w io.Writer, pcs map[XZPos]*preChunk) error {
 	offs := make(map[XZPos]chunkOffTs)
 	buf := new(bytes.Buffer)
-	pw := kagus.NewPaddedWriter(buf, 4096)
+	pw := kagus.NewPaddedWriter(buf, sectorSize)
 
 	for pos, pc := range pcs {
 		off := buf.Len()
@@ -130,14 +130,14 @@ func writeRegionFile(w io.Writer, pcs map[XZPos]*preChunk) error {
 			return err
 		}
 		offs[pos] = chunkOffTs{
-			offset: int64(8192 + off),
+			offset: int64(2*sectorSize + off),
 			size:   int64(buf.Len() - off),
 			ts:     pc.ts,
 		}
 	}
 
-	for z := 0; z < 32; z++ {
-		for x := 0; x < 32; x++ {
+	for z := 0; z < superchunkSizeXZ; z++ {
+		for x := 0; x < superchunkSizeXZ; x++ {
 			off := uint32(0)
 			if cOff, ok := offs[XZPos{x, z}]; ok {
 				off = cOff.calcLocationEntry()
@@ -149,8 +149,8 @@ func writeRegionFile(w io.Writer, pcs map[XZPos]*preChunk) error {
 		}
 	}
 
-	for z := 0; z < 32; z++ {
-		for x := 0; x < 32; x++ {
+	for z := 0; z < superchunkSizeXZ; z++ {
+		for x := 0; x < superchunkSizeXZ; x++ {
 			ts := int32(0)
 			if cOff, ok := offs[XZPos{x, z}]; ok {
 				ts = int32(cOff.ts.Unix())

@@ -27,8 +27,8 @@ func main() {
 	}
 
 	xmin, xmax, zmin, zmax := region.MaxDims()
-	w := (xmax - xmin) * 16
-	h := (zmax - zmin) * 16
+	w := (xmax - xmin) * mcmap.ChunkSizeXZ
+	h := (zmax - zmin) * mcmap.ChunkSizeXZ
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 
 chunkLoop:
@@ -44,19 +44,19 @@ chunkLoop:
 			os.Exit(1)
 		}
 
-		for x := 0; x < 16; x++ {
+		for x := 0; x < mcmap.ChunkSizeXZ; x++ {
 		scanZ:
-			for z := 0; z < 16; z++ {
+			for z := 0; z < mcmap.ChunkSizeXZ; z++ {
 				ax, az := mcmap.ChunkToBlock(cx, cz, x, z)
-				for y := 255; y >= 0; y-- {
+				for y := mcmap.ChunkSizeY; y >= 0; y-- {
 					blk := chunk.Block(x, y, z)
 					c, ok := colors[blk.ID]
 					if ok {
-						img.Set(ax-(xmin*16), az-(zmin*16), c)
+						img.Set(ax-(xmin*mcmap.ChunkSizeXZ), az-(zmin*mcmap.ChunkSizeXZ), c)
 						continue scanZ
 					}
 				}
-				img.Set(ax-(xmin*16), az-(zmin*16), rgb(0x000000))
+				img.Set(ax-(xmin*mcmap.ChunkSizeXZ), az-(zmin*mcmap.ChunkSizeXZ), rgb(0x000000))
 			}
 		}
 

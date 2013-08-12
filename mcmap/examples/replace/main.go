@@ -37,9 +37,9 @@ chunkLoop:
 		}
 
 		modified := false
-		for y := 0; y < 256; y++ {
-			for x := 0; x < 16; x++ {
-				for z := 0; z < 16; z++ {
+		for y := 0; y < mcmap.ChunkSizeY; y++ {
+			for x := 0; x < mcmap.ChunkSizeXZ; x++ {
+				for z := 0; z < mcmap.ChunkSizeXZ; z++ {
 					blk := chunk.Block(x, y, z)
 					if blk.ID == mcmap.BlkBlockOfIron {
 						blk.ID = mcmap.BlkBlockOfDiamond

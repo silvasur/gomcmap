@@ -124,7 +124,7 @@ func (pc *preChunk) toChunk(reg *Region) (*Chunk, error) {
 		return nil, fmt.Errorf("Could not read InhabitatedTime tag: %s", err)
 	}
 
-	c.biomes = make([]Biome, 256)
+	c.biomes = make([]Biome, ChunkRectXZ)
 	biomes, err := lvl.GetByteArray("Biomes")
 	switch err {
 	case nil:
@@ -132,7 +132,7 @@ func (pc *preChunk) toChunk(reg *Region) (*Chunk, error) {
 			c.biomes[i] = Biome(bio)
 		}
 	case nbt.NotFound:
-		for i := 0; i < 256; i++ {
+		for i := 0; i < ChunkRectXZ; i++ {
 			c.biomes[i] = BioUncalculated
 		}
 	default:
@@ -162,7 +162,7 @@ func (pc *preChunk) toChunk(reg *Region) (*Chunk, error) {
 		return nil, fmt.Errorf("Could not read Section tag: %s", err)
 	}
 
-	c.blocks = make([]Block, 16*16*256)
+	c.blocks = make([]Block, ChunkSize)
 	for _, _section := range sections.Elems {
 		section := _section.(nbt.TagCompound)
 
@@ -170,17 +170,17 @@ func (pc *preChunk) toChunk(reg *Region) (*Chunk, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Could not read Section -> Y tag: %s", err)
 		}
-		off := int(y) * 4096
+		off := int(y) * chunkSectionSize
 
 		blocks, err := section.GetByteArray("Blocks")
 		if err != nil {
 			return nil, fmt.Errorf("Could not read Section -> Blocks tag: %s", err)
 		}
-		blocksAdd := make([]byte, 4096)
+		blocksAdd := make([]byte, chunkSectionSize)
 		add, err := section.GetByteArray("Add")
 		switch err {
 		case nil:
-			for i := 0; i < 4096; i++ {
+			for i := 0; i < chunkSectionSize; i++ {
 				blocksAdd[i] = halfbyte(add, i)
 			}
 		case nbt.NotFound:
@@ -201,7 +201,7 @@ func (pc *preChunk) toChunk(reg *Region) (*Chunk, error) {
 			return nil, fmt.Errorf("Could not read Section -> SkyLight tag: %s", err)
 		}
 
-		for i := 0; i < 4096; i++ {
+		for i := 0; i < chunkSectionSize; i++ {
 			c.blocks[off+i] = Block{
 				ID:         BlockID(uint16(blocks[i]) | (uint16(blocksAdd[i]) << 8)),
 				Data:       halfbyte(blkData, i),
@@ -239,8 +239,8 @@ func (pc *preChunk) toChunk(reg *Region) (*Chunk, error) {
 
 			_, _, x, z = BlockToChunk(x, z)
 
-			x %= 16
-			z %= 16
+			x %= ChunkSizeXZ
+			z %= ChunkSizeXZ
 
 			tick := TileTick{}
 			if tick.i, err = tTick.GetInt("i"); err != nil {
@@ -281,7 +281,7 @@ func (c *Chunk) toPreChunk() (*preChunk, error) {
 	}
 
 	hasBiomes := false
-	biomes := make([]byte, 16*16)
+	biomes := make([]byte, ChunkRectXZ)
 	for i, bio := range c.biomes {
 		if bio != BioUncalculated {
 			hasBiomes = true
@@ -298,16 +298,16 @@ func (c *Chunk) toPreChunk() (*preChunk, error) {
 	tileTicks := make([]nbt.TagCompound, 0)
 
 	for subchunk := 0; subchunk < 16; subchunk++ {
-		off := subchunk * 4096
+		off := subchunk * chunkSectionSize
 
-		blocks := make([]byte, 4096)
-		add := make([]byte, 2048)
-		data := make([]byte, 2048)
-		blockLight := make([]byte, 2048)
-		skyLight := make([]byte, 2048)
+		blocks := make([]byte, chunkSectionSize)
+		add := make([]byte, chunkSectionSize/2)
+		data := make([]byte, chunkSectionSize/2)
+		blockLight := make([]byte, chunkSectionSize/2)
+		skyLight := make([]byte, chunkSectionSize/2)
 
 		allAir, addEmpty := true, true
-		for i := 0; i < 4096; i++ {
+		for i := 0; i < chunkSectionSize; i++ {
 			blk := c.blocks[i+off]
 			id := blk.ID
 			if id != BlkAir {

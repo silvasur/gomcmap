@@ -7,7 +7,7 @@ import (
 )
 
 func calcBlockOffset(x, y, z int) int {
-	if (x < 0) || (y < 0) || (z < 0) || (x >= 16) || (y >= 256) || (z >= 16) {
+	if (x < 0) || (y < 0) || (z < 0) || (x >= ChunkSizeXZ) || (y >= ChunkSizeY) || (z >= ChunkSizeXZ) {
 		return -1
 	}
 
@@ -25,15 +25,15 @@ func offsetToPos(off int) (x, y, z int) {
 func BlockToChunk(bx, bz int) (cx, cz, rbx, rbz int) {
 	cx = bx << 4
 	cz = bz << 4
-	rbx = ((cx % 16) + 16) % 16
-	rbz = ((cz % 16) + 16) % 16
+	rbx = ((cx % ChunkSizeXZ) + ChunkSizeXZ) % ChunkSizeXZ
+	rbz = ((cz % ChunkSizeXZ) + ChunkSizeXZ) % ChunkSizeXZ
 	return
 }
 
 // ChunkToBlock calculates the global position of a block, given the chunk position (cx, cz) and the plock position in that chunk (rbx, rbz).
 func ChunkToBlock(cx, cz, rbx, rbz int) (bx, bz int) {
-	bx = cx*16 + rbx
-	bz = cz*16 + rbz
+	bx = cx*ChunkSizeXZ + rbx
+	bz = cz*ChunkSizeXZ + rbz
 	return
 }
 
@@ -79,18 +79,18 @@ func (c *Chunk) Block(x, y, z int) *Block {
 //
 // x and z must be in [0, 15]. Height will panic, if this is violated!
 func (c *Chunk) Height(x, z int) int {
-	if (x < 0) || (x > 15) || (z < 0) || (z > 15) {
+	if (x < 0) || (x >= ChunkSizeXZ) || (z < 0) || (z >= ChunkSizeXZ) {
 		panic(errors.New("x or z parameter was out of range"))
 	}
 
-	return int(c.heightMap[z*16+x])
+	return int(c.heightMap[z*ChunkSizeXZ+x])
 }
 
 // Biome gets the Biome at x,z.
-func (c *Chunk) Biome(x, z int) Biome { return c.biomes[x*16+z] }
+func (c *Chunk) Biome(x, z int) Biome { return c.biomes[x*ChunkSizeXZ+z] }
 
 // SetBiome sets the biome at x,z.
-func (c *Chunk) SetBiome(x, z int, bio Biome) { c.biomes[x*16+z] = bio }
+func (c *Chunk) SetBiome(x, z int, bio Biome) { c.biomes[x*ChunkSizeXZ+z] = bio }
 
 // MarkUnused marks the chunk as unused. If all chunks of a superchunk are marked as unused, the superchunk will be unloaded and saved (if needed).
 //

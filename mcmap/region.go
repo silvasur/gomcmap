@@ -97,24 +97,24 @@ func (reg *Region) MaxDims() (xmin, xmax, zmin, zmax int) {
 
 	xmax++
 	zmax++
-	xmin *= 32
-	xmax *= 32
-	zmin *= 32
-	zmax *= 32
+	xmin *= superchunkSizeXZ
+	xmax *= superchunkSizeXZ
+	zmin *= superchunkSizeXZ
+	zmax *= superchunkSizeXZ
 	return
 }
 
 func chunkToSuperchunk(cx, cz int) (scx, scz, rx, rz int) {
 	scx = cx >> 5
 	scz = cz >> 5
-	rx = ((cx % 32) + 32) % 32
-	rz = ((cz % 32) + 32) % 32
+	rx = ((cx % superchunkSizeXZ) + superchunkSizeXZ) % superchunkSizeXZ
+	rz = ((cz % superchunkSizeXZ) + superchunkSizeXZ) % superchunkSizeXZ
 	return
 }
 
 func superchunkToChunk(scx, scz, rx, rz int) (cx, cz int) {
-	cx = scx*32 + rx
-	cz = scz*32 + rz
+	cx = scx*superchunkSizeXZ + rx
+	cz = scz*superchunkSizeXZ + rz
 	return
 }
 
@@ -250,8 +250,8 @@ func (reg *Region) AllChunks() <-chan XZPos {
 	go func(ch chan<- XZPos) {
 		for spos, _ := range reg.superchunksAvail {
 			scx, scz := spos.X, spos.Z
-			for rx := 0; rx < 32; rx++ {
-				for rz := 0; rz < 32; rz++ {
+			for rx := 0; rx < superchunkSizeXZ; rx++ {
+				for rz := 0; rz < superchunkSizeXZ; rz++ {
 					cx, cz := superchunkToChunk(scx, scz, rx, rz)
 					ch <- XZPos{cx, cz}
 				}
