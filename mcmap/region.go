@@ -97,10 +97,10 @@ func (reg *Region) MaxDims() (xmin, xmax, zmin, zmax int) {
 
 	xmax++
 	zmax++
-	xmin *= 16
-	xmax *= 16
-	zmin *= 16
-	zmax *= 16
+	xmin *= 32
+	xmax *= 32
+	zmin *= 32
+	zmax *= 32
 	return
 }
 
@@ -250,8 +250,8 @@ func (reg *Region) AllChunks() <-chan XZPos {
 	go func(ch chan<- XZPos) {
 		for spos, _ := range reg.superchunksAvail {
 			scx, scz := spos.X, spos.Z
-			for rx := 0; rx < 16; rx++ {
-				for rz := 0; rz < 16; rz++ {
+			for rx := 0; rx < 32; rx++ {
+				for rz := 0; rz < 32; rz++ {
 					cx, cz := superchunkToChunk(scx, scz, rx, rz)
 					ch <- XZPos{cx, cz}
 				}
