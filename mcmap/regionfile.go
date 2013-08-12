@@ -15,6 +15,10 @@ type chunkOffTs struct {
 	ts           time.Time
 }
 
+func (co chunkOffTs) calcLocationEntry() uint32 {
+	return uint32((co.size>>12)&0xff) | (uint32(co.offset>>12) << 8)
+}
+
 func (cOff chunkOffTs) readPreChunk(r io.ReadSeeker) (*preChunk, error) {
 	pc := preChunk{ts: cOff.ts}
 
@@ -98,4 +102,66 @@ func readRegionFile(r io.ReadSeeker) (map[XZPos]*preChunk, error) {
 	}
 
 	return preChunks, nil
+}
+
+func (pc *preChunk) writePreChunk(w io.Writer) error {
+	length := uint32(len(pc.data) + 1)
+	if err := binary.Write(w, binary.BigEndian, length); err != nil {
+		return err
+	}
+	if _, err := w.Write([]byte{pc.compression}); err != nil {
+		return err
+	}
+	_, err := w.Write(pc.data)
+	return err
+}
+
+func writeRegionFile(w io.Writer, pcs map[XZPos]*preChunk) error {
+	offs := make(map[XZPos]chunkOffTs)
+	buf := new(bytes.Buffer)
+	pw := kagus.NewPaddedWriter(buf, 4096)
+
+	for pos, pc := range pcs {
+		off := buf.Len()
+		if err := pc.writePreChunk(pw); err != nil {
+			return err
+		}
+		if err := pw.Pad(); err != nil {
+			return err
+		}
+		offs[pos] = chunkOffTs{
+			offset: int64(8192 + off),
+			size:   int64(buf.Len() - off),
+			ts:     pc.ts,
+		}
+	}
+
+	for z := 0; z < 32; z++ {
+		for x := 0; x < 32; x++ {
+			off := uint32(0)
+			if cOff, ok := offs[XZPos{x, z}]; ok {
+				off = cOff.calcLocationEntry()
+			}
+
+			if err := binary.Write(w, binary.BigEndian, off); err != nil {
+				return err
+			}
+		}
+	}
+
+	for z := 0; z < 32; z++ {
+		for x := 0; x < 32; x++ {
+			ts := int32(0)
+			if cOff, ok := offs[XZPos{x, z}]; ok {
+				ts = int32(cOff.ts.Unix())
+			}
+
+			if err := binary.Write(w, binary.BigEndian, ts); err != nil {
+				return err
+			}
+		}
+	}
+
+	_, err := io.Copy(w, buf)
+	return err
 }

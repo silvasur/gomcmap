@@ -8,10 +8,17 @@ import (
 
 func calcBlockOffset(x, y, z int) int {
 	if (x < 0) || (y < 0) || (z < 0) || (x >= 16) || (y >= 256) || (z >= 16) {
-		panic(errors.New("Can't calculate Block offset, coordinates out of range."))
+		return -1
 	}
 
-	return x + (z * 16) + (y * 256)
+	return x | (z << 4) | (y << 8)
+}
+
+func offsetToPos(off int) (x, y, z int) {
+	x = off & 0xf
+	z = (off >> 4) & 0xf
+	y = (off >> 8) & 0xff
+	return
 }
 
 // BlockToChunk calculates the chunk (cx, cz) and the block position in this chunk(rbx, rbz) of a block position given global coordinates.
@@ -36,17 +43,16 @@ type Chunk struct {
 
 	x, z int32
 
-	lastUpdate      int64
-	populated       bool
-	inhabitatedTime int64
-	ts              time.Time
+	lastUpdate    int64
+	populated     bool
+	inhabitedTime int64
+	ts            time.Time
 
-	heightMap            []int32 // Note: Ordered ZX
-	blockLight, skyLight []byte  // Note: Ordered YZX, only half-bytes
+	heightMap []int32 // Ordered ZX
 
 	modified bool
-	blocks   []Block // NOTE: Ordered YZX
-	biomes   []Biome // NOTE: Orderes XZ
+	blocks   []Block // Ordered YZX
+	biomes   []Biome // Ordered XZ
 }
 
 // MarkModified needs to be called, if some data of the chunk was modified.

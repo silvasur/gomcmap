@@ -31,6 +31,15 @@ func halfbyte(b []byte, i int) byte {
 	return (b[i/2] >> 4) & 0x0f
 }
 
+func setHalfbyte(b []byte, i int, v byte) {
+	v &= 0xf
+	if i%2 == 0 {
+		b[i/2] |= v
+	} else {
+		b[i/2] |= v << 4
+	}
+}
+
 func extractCoord(tc nbt.TagCompound) (x, y, z int, err error) {
 	var _x, _y, _z int32
 	if _x, err = tc.GetInt("x"); err != nil {
@@ -106,11 +115,11 @@ func (pc *preChunk) toChunk() (*Chunk, error) {
 	}
 	c.populated = (populated == 1)
 
-	c.inhabitatedTime, err = lvl.GetLong("InhabitedTime")
+	c.inhabitedTime, err = lvl.GetLong("InhabitedTime")
 	switch err {
 	case nil:
 	case nbt.NotFound:
-		c.inhabitatedTime = 0
+		c.inhabitedTime = 0
 	default:
 		return nil, fmt.Errorf("Could not read InhabitatedTime tag: %s", err)
 	}
@@ -254,4 +263,137 @@ func (pc *preChunk) toChunk() (*Chunk, error) {
 	}
 
 	return &c, nil
+}
+
+func (c *Chunk) toPreChunk() (*preChunk, error) {
+	terraPopulated := byte(0)
+	if c.populated {
+		terraPopulated = 1
+	}
+	lvl := nbt.TagCompound{
+		"xPos":             nbt.NewIntTag(c.x),
+		"zPos":             nbt.NewIntTag(c.z),
+		"LastUpdate":       nbt.NewLongTag(c.lastUpdate),
+		"TerrainPopulated": nbt.NewByteTag(terraPopulated),
+		"InhabitedTime":    nbt.NewLongTag(c.inhabitedTime),
+		"HeightMap":        nbt.NewIntArrayTag(c.heightMap),
+		"Entities":         nbt.Tag{nbt.TAG_Compound, c.Entities},
+	}
+
+	hasBiomes := false
+	biomes := make([]byte, 16*16)
+	for i, bio := range c.biomes {
+		if bio != BioUncalculated {
+			hasBiomes = true
+			break
+		}
+		biomes[i] = byte(bio)
+	}
+	if hasBiomes {
+		lvl["Biomes"] = nbt.NewByteArrayTag(biomes)
+	}
+
+	sections := make([]nbt.TagCompound, 0)
+	tileEnts := make([]nbt.TagCompound, 0)
+	tileTicks := make([]nbt.TagCompound, 0)
+
+	for subchunk := 0; subchunk < 16; subchunk++ {
+		off := subchunk * 4096
+
+		blocks := make([]byte, 4096)
+		add := make([]byte, 2048)
+		data := make([]byte, 2048)
+		blockLight := make([]byte, 2048)
+		skyLight := make([]byte, 2048)
+
+		allAir, addEmpty := true, true
+		for i := 0; i < 4096; i++ {
+			blk := c.blocks[i+off]
+			id := blk.ID
+			if id != BlkAir {
+				allAir = false
+			}
+
+			blocks[i] = byte(id & 0xff)
+			idH := byte(id >> 8)
+			if idH != 0 {
+				addEmpty = false
+			}
+			setHalfbyte(add, i, idH)
+
+			setHalfbyte(data, i, blk.Data)
+			setHalfbyte(blockLight, i, blk.BlockLight)
+			setHalfbyte(skyLight, i, blk.SkyLight)
+
+			x, y, z := offsetToPos(i + off)
+			x, z = ChunkToBlock(int(c.x), int(c.z), x, z)
+
+			if (blk.TileEntity != nil) && (len(blk.TileEntity) > 0) {
+				// Fix coords
+				blk.TileEntity["x"] = nbt.NewIntTag(int32(x))
+				blk.TileEntity["y"] = nbt.NewIntTag(int32(y))
+				blk.TileEntity["z"] = nbt.NewIntTag(int32(z))
+				tileEnts = append(tileEnts, blk.TileEntity)
+			}
+
+			if blk.Tick != nil {
+				tileTick := nbt.TagCompound{
+					"x": nbt.NewIntTag(int32(x)),
+					"y": nbt.NewIntTag(int32(y)),
+					"z": nbt.NewIntTag(int32(z)),
+					"i": nbt.NewIntTag(blk.Tick.i),
+					"t": nbt.NewIntTag(blk.Tick.t),
+				}
+				if blk.Tick.hasP {
+					tileTick["p"] = nbt.NewIntTag(blk.Tick.p)
+				}
+				tileTicks = append(tileTicks, tileTick)
+			}
+		}
+
+		if !allAir {
+			comp := nbt.TagCompound{
+				"Y":          nbt.NewByteTag(byte(subchunk)),
+				"Blocks":     nbt.NewByteArrayTag(blocks),
+				"Data":       nbt.NewByteArrayTag(data),
+				"BlockLight": nbt.NewByteArrayTag(blockLight),
+				"SkyLight":   nbt.NewByteArrayTag(skyLight),
+			}
+			if !addEmpty {
+				comp["Add"] = nbt.NewByteArrayTag(add)
+			}
+			sections = append(sections, comp)
+		}
+	}
+
+	lvl["Sections"] = nbt.NewListTag(nbt.TAG_Compound, sections)
+
+	if len(c.Entities) > 0 {
+		lvl["Entities"] = nbt.NewListTag(nbt.TAG_Compound, c.Entities)
+	} else {
+		lvl["Entities"] = nbt.NewListTag(nbt.TAG_Byte, []byte{})
+	}
+	if len(tileEnts) > 0 {
+		lvl["TileEntities"] = nbt.NewListTag(nbt.TAG_Compound, tileEnts)
+	} else {
+		lvl["TileEntities"] = nbt.NewListTag(nbt.TAG_Byte, []byte{})
+	}
+	if len(tileTicks) > 0 {
+		lvl["TileTicks"] = nbt.NewListTag(nbt.TAG_Compound, tileTicks)
+	}
+
+	root := nbt.Tag{nbt.TAG_Compound, nbt.TagCompound{
+		"Level": nbt.Tag{nbt.TAG_Compound, lvl},
+	}}
+
+	buf := new(bytes.Buffer)
+	if err := nbt.WriteZlibdNamedTag(buf, "", root); err != nil {
+		return nil, err
+	}
+
+	return &preChunk{
+		ts:          c.ts,
+		data:        buf.Bytes(),
+		compression: compressZlib,
+	}, nil
 }

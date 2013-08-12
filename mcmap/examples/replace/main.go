@@ -35,19 +35,32 @@ chunkLoop:
 			os.Exit(1)
 		}
 
+		modified := false
 		for y := 0; y < 256; y++ {
 			for x := 0; x < 16; x++ {
 				for z := 0; z < 16; z++ {
 					blk := chunk.Block(x, y, z)
-					if blk.ID == mcmap.BlkEmeraldOre {
-						absx, absz := mcmap.ChunkToBlock(cx, cz, x, z)
-						fmt.Printf("%d, %d, %d\n", absx, y, absz)
+					if blk.ID == mcmap.BlkBlockOfIron {
+						blk.ID = mcmap.BlkBlockOfDiamond
+						modified = true
 					}
 				}
 			}
 		}
 
-		chunk = nil
-		region.UnloadChunk(cx, cz)
+		if modified {
+			fmt.Printf("Modified chunk %d, %d.\n", cx, cz)
+			chunk.MarkModified()
+		}
+
+		if err := region.UnloadChunk(cx, cz); err != nil {
+			fmt.Fprintf(os.Stderr, "Error while unloading chunk %d, %d: %s\n", cx, cz, err)
+			os.Exit(1)
+		}
+	}
+
+	if err := region.Save(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while saving: %s\n", err)
+		os.Exit(1)
 	}
 }

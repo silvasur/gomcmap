@@ -21,15 +21,15 @@ type superchunk struct {
 
 type Region struct {
 	path             string
+	autosave         bool
 	superchunksAvail map[XZPos]bool
-
-	superchunks map[XZPos]*superchunk
+	superchunks      map[XZPos]*superchunk
 }
 
 var mcaRegex = regexp.MustCompile(`^r\.([0-9-]+)\.([0-9-]+)\.mca$`)
 
-// OpenRegion opens a region directory.
-func OpenRegion(path string) (*Region, error) {
+// OpenRegion opens a region directory. If autosave is true, mcmap will save modified and unloaded chunks automatically to reduce memory usage. You still have to call Save at the end.
+func OpenRegion(path string, autosave bool) (*Region, error) {
 	rv := &Region{
 		path:             path,
 		superchunksAvail: make(map[XZPos]bool),
@@ -142,16 +142,28 @@ func (reg *Region) loadSuperchunk(pos XZPos) error {
 	return nil
 }
 
-func (reg *Region) cleanSuperchunks() error {
+func (reg *Region) cleanSuperchunks(forceSave bool) error {
 	del := make(map[XZPos]bool)
 
 	for scPos, sc := range reg.superchunks {
 		if len(sc.chunks) > 0 {
-			return nil
+			continue
 		}
 
 		if sc.modified {
-			// TODO: Save superchunk to region file
+			if !(reg.autosave || forceSave) {
+				continue
+			}
+			fn := fmt.Sprintf("%s%cr.%d.%d.mca", reg.path, os.PathSeparator, scPos.X, scPos.Z)
+			f, err := os.Create(fn)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			if err := writeRegionFile(f, sc.preChunks); err != nil {
+				return err
+			}
 		}
 
 		del[scPos] = true
@@ -191,7 +203,7 @@ func (reg *Region) Chunk(x, z int) (*Chunk, error) {
 		sc.chunks[cPos] = chunk
 	}
 
-	if err := reg.cleanSuperchunks(); err != nil {
+	if err := reg.cleanSuperchunks(false); err != nil {
 		return nil, err
 	}
 
@@ -199,29 +211,35 @@ func (reg *Region) Chunk(x, z int) (*Chunk, error) {
 }
 
 // UnloadChunk marks a chunk as unused. If all chunks of a superchunk are marked as unused, the superchunk will be unloaded and saved (if needed).
-func (reg *Region) UnloadChunk(x, z int) {
+func (reg *Region) UnloadChunk(x, z int) error {
 	scx, scz, cx, cz := chunkToSuperchunk(x, z)
 	scPos := XZPos{scx, scz}
 	cPos := XZPos{cx, cz}
 
 	sc, ok := reg.superchunks[scPos]
 	if !ok {
-		return
+		return nil
 	}
 
 	chunk, ok := sc.chunks[cPos]
 	if !ok {
-		return
+		return nil
 	}
 
 	if chunk.modified {
-		// TODO: Save to prechunks
+		pc, err := chunk.toPreChunk()
+		if err != nil {
+			return err
+		}
+		sc.preChunks[cPos] = pc
 
 		chunk.modified = false
 		sc.modified = true
 	}
 
 	delete(sc.chunks, cPos)
+
+	return nil
 }
 
 // AllChunks returns a channel that will give you the positions of all possibly available chunks in an efficient order.
@@ -243,4 +261,9 @@ func (reg *Region) AllChunks() <-chan XZPos {
 	}(ch)
 
 	return ch
+}
+
+// Save saves modified and unloaded chunks.
+func (reg *Region) Save() error {
+	return reg.cleanSuperchunks(true)
 }
