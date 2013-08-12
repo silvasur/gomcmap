@@ -48,7 +48,6 @@ chunkLoop:
 			}
 		}
 
-		chunk = nil
-		region.UnloadChunk(cx, cz)
+		chunk.MarkUnused()
 	}
 }

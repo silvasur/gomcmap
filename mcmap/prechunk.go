@@ -83,8 +83,8 @@ func (pc *preChunk) getLevelTag() (nbt.TagCompound, error) {
 	return lvl, nil
 }
 
-func (pc *preChunk) toChunk() (*Chunk, error) {
-	c := Chunk{ts: pc.ts}
+func (pc *preChunk) toChunk(reg *Region) (*Chunk, error) {
+	c := Chunk{ts: pc.ts, reg: reg}
 
 	lvl, err := pc.getLevelTag()
 	if err != nil {

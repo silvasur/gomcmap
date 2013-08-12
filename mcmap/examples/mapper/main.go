@@ -60,7 +60,7 @@ chunkLoop:
 			}
 		}
 
-		if err := region.UnloadChunk(cx, cz); err != nil {
+		if err := chunk.MarkUnused(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error while unloading chunk %d, %d: %s\n", cx, cz, err)
 			os.Exit(1)
 		}

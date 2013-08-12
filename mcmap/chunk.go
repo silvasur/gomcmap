@@ -53,6 +53,8 @@ type Chunk struct {
 	modified bool
 	blocks   []Block // Ordered YZX
 	biomes   []Biome // Ordered XZ
+
+	reg *Region
 }
 
 // MarkModified needs to be called, if some data of the chunk was modified.
@@ -89,5 +91,12 @@ func (c *Chunk) Biome(x, z int) Biome { return c.biomes[x*16+z] }
 
 // SetBiome sets the biome at x,z.
 func (c *Chunk) SetBiome(x, z int, bio Biome) { c.biomes[x*16+z] = bio }
+
+// MarkUnused marks the chunk as unused. If all chunks of a superchunk are marked as unused, the superchunk will be unloaded and saved (if needed).
+//
+// You must not use the chunk any longer, after you called this function.
+//
+// If the chunk was modified, call MarkModified BEFORE.
+func (c *Chunk) MarkUnused() error { return c.reg.unloadChunk(int(c.x), int(c.z)) }
 
 // TODO: func (c *Chunk) RecalcHeightMap()

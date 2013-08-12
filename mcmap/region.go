@@ -198,7 +198,7 @@ func (reg *Region) Chunk(x, z int) (*Chunk, error) {
 		}
 
 		var err error
-		if chunk, err = pc.toChunk(); err != nil {
+		if chunk, err = pc.toChunk(reg); err != nil {
 			return nil, err
 		}
 		sc.chunks[cPos] = chunk
@@ -211,8 +211,7 @@ func (reg *Region) Chunk(x, z int) (*Chunk, error) {
 	return chunk, nil
 }
 
-// UnloadChunk marks a chunk as unused. If all chunks of a superchunk are marked as unused, the superchunk will be unloaded and saved (if needed).
-func (reg *Region) UnloadChunk(x, z int) error {
+func (reg *Region) unloadChunk(x, z int) error {
 	scx, scz, cx, cz := chunkToSuperchunk(x, z)
 	scPos := XZPos{scx, scz}
 	cPos := XZPos{cx, cz}
@@ -264,7 +263,7 @@ func (reg *Region) AllChunks() <-chan XZPos {
 	return ch
 }
 
-// Save saves modified and unloaded chunks.
+// Save saves modified and unused chunks.
 func (reg *Region) Save() error {
 	return reg.cleanSuperchunks(true)
 }
