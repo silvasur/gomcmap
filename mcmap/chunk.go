@@ -52,7 +52,7 @@ type Chunk struct {
 
 	modified bool
 	blocks   []Block // Ordered YZX
-	biomes   []Biome // Ordered XZ
+	biomes   []Biome // Ordered ZX
 
 	reg *Region
 }
@@ -98,10 +98,10 @@ func (c *Chunk) Iter(fx func(int, int, int, *Block)) {
 }
 
 // Biome gets the Biome at x,z.
-func (c *Chunk) Biome(x, z int) Biome { return c.biomes[x*ChunkSizeXZ+z] }
+func (c *Chunk) Biome(x, z int) Biome { return c.biomes[z*ChunkSizeXZ+x] }
 
 // SetBiome sets the biome at x,z.
-func (c *Chunk) SetBiome(x, z int, bio Biome) { c.biomes[x*ChunkSizeXZ+z] = bio }
+func (c *Chunk) SetBiome(x, z int, bio Biome) { c.biomes[z*ChunkSizeXZ+x] = bio }
 
 // MarkUnused marks the chunk as unused. If all chunks of a superchunk are marked as unused, the superchunk will be unloaded and saved (if needed).
 //
