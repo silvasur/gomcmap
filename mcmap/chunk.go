@@ -23,8 +23,8 @@ func offsetToPos(off int) (x, y, z int) {
 
 // BlockToChunk calculates the chunk (cx, cz) and the block position in this chunk(rbx, rbz) of a block position given global coordinates.
 func BlockToChunk(bx, bz int) (cx, cz, rbx, rbz int) {
-	cx = bx << 4
-	cz = bz << 4
+	cx = bx >> 4
+	cz = bz >> 4
 	rbx = ((cx % ChunkSizeXZ) + ChunkSizeXZ) % ChunkSizeXZ
 	rbz = ((cz % ChunkSizeXZ) + ChunkSizeXZ) % ChunkSizeXZ
 	return
