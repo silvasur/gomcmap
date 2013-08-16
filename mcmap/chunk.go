@@ -25,8 +25,8 @@ func offsetToPos(off int) (x, y, z int) {
 func BlockToChunk(bx, bz int) (cx, cz, rbx, rbz int) {
 	cx = bx >> 4
 	cz = bz >> 4
-	rbx = ((cx % ChunkSizeXZ) + ChunkSizeXZ) % ChunkSizeXZ
-	rbz = ((cz % ChunkSizeXZ) + ChunkSizeXZ) % ChunkSizeXZ
+	rbx = ((bx % ChunkSizeXZ) + ChunkSizeXZ) % ChunkSizeXZ
+	rbz = ((bz % ChunkSizeXZ) + ChunkSizeXZ) % ChunkSizeXZ
 	return
 }
 
