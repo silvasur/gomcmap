@@ -285,7 +285,6 @@ func (c *Chunk) toPreChunk() (*preChunk, error) {
 	for i, bio := range c.biomes {
 		if bio != BioUncalculated {
 			hasBiomes = true
-			break
 		}
 		biomes[i] = byte(bio)
 	}
