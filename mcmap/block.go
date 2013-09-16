@@ -73,7 +73,7 @@ const (
 	BlkWool                       = 35
 	BlkBlockMovedByPiston         = 36
 	BlkDandelion                  = 37
-	BlkRose                       = 38
+	BlkFlower                     = 38
 	BlkBrownMushroom              = 39
 	BlkRedMushroom                = 40
 	BlkBlockOfGold                = 41
@@ -199,6 +199,12 @@ const (
 	BlkCarpet                     = 171
 	BlkHardenedClay               = 172
 	BlkBlockOfCoal                = 173
+	BlkPackedIce                  = 174
+	BlkLargeFlower                = 175
+
+	// Aliases
+	BlkRose  = BlkFlower
+	BlkPoppy = BlkFlower
 )
 
 var blockNames = map[BlockID]string{
@@ -240,7 +246,7 @@ var blockNames = map[BlockID]string{
 	BlkWool:                       "Wool",
 	BlkBlockMovedByPiston:         "Block moved by Piston",
 	BlkDandelion:                  "Dandelion",
-	BlkRose:                       "Rose",
+	BlkFlower:                     "Flower",
 	BlkBrownMushroom:              "Brown Mushroom",
 	BlkRedMushroom:                "Red Mushroom",
 	BlkBlockOfGold:                "Block of Gold",
@@ -366,6 +372,8 @@ var blockNames = map[BlockID]string{
 	BlkCarpet:                     "Carpet",
 	BlkHardenedClay:               "Hardened Clay",
 	BlkBlockOfCoal:                "Block of Coal",
+	BlkPackedIce:                  "Packed Ice",
+	BlkLargeFlower:                "Large Flower",
 }
 
 func (b BlockID) String() string {
