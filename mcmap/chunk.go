@@ -118,7 +118,7 @@ func (c *Chunk) RecalcHeightMap() {
 	i := 0
 	for z := 0; z < ChunkSizeXZ; z++ {
 		for x := 0; x < ChunkSizeXZ; x++ {
-			for y := ChunkSizeY; y >= 0; y-- {
+			for y := ChunkSizeY-1; y >= 0; y-- {
 				blkid := c.blocks[calcBlockOffset(x, y, z)].ID
 				if (blkid != BlkAir) && (blkid != BlkGlass) && (blkid != BlkGlassPane) {
 					c.heightMap[i] = int32(y)
