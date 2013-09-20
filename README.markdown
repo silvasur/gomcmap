@@ -20,7 +20,6 @@ Although I tested the library with some maps, I can't guarantee that everything 
 
 ## Wishlist / TODO
 
-* Removing chunks.
 * Recalculating light data.
 * Reading and modifying level.dat and other files (currently only the region files are used).
 * Test compatibility with older versions of Minecraft.

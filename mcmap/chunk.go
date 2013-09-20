@@ -54,6 +54,8 @@ type Chunk struct {
 	blocks   []Block // Ordered YZX
 	biomes   []Biome // Ordered ZX
 
+	deleted bool
+
 	reg *Region
 }
 
@@ -131,6 +133,9 @@ func (c *Chunk) SetBiome(x, z int, bio Biome) { c.biomes[z*ChunkSizeXZ+x] = bio 
 //
 // If the chunk was modified, call MarkModified BEFORE.
 func (c *Chunk) MarkUnused() error { return c.reg.unloadChunk(int(c.x), int(c.z)) }
+
+// MarkDeleted marks this chunk as deleted. After marking it as unused, it will be deleted and can no longer be used.
+func (c *Chunk) MarkDeleted() { c.deleted = true }
 
 // RecalcHeightMap recalculates the internal height map.
 //

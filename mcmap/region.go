@@ -157,15 +157,23 @@ func (reg *Region) cleanSuperchunks(forceSave bool) error {
 			if !(reg.autosave || forceSave) {
 				continue
 			}
-			fn := fmt.Sprintf("%s%cr.%d.%d.mca", reg.path, os.PathSeparator, scPos.X, scPos.Z)
-			f, err := os.Create(fn)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
 
-			if err := writeRegionFile(f, sc.preChunks); err != nil {
-				return err
+			fn := fmt.Sprintf("%s%cr.%d.%d.mca", reg.path, os.PathSeparator, scPos.X, scPos.Z)
+
+			if len(sc.preChunks) == 0 {
+				if err := os.Remove(fn); err != nil {
+					return err
+				}
+			} else {
+				f, err := os.Create(fn)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+
+				if err := writeRegionFile(f, sc.preChunks); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -239,7 +247,10 @@ func (reg *Region) unloadChunk(x, z int) error {
 		return nil
 	}
 
-	if chunk.modified {
+	if chunk.deleted {
+		delete(sc.preChunks, cPos)
+		sc.modified = true
+	} else if chunk.modified {
 		pc, err := chunk.toPreChunk()
 		if err != nil {
 			return err
