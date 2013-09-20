@@ -1,3 +1,4 @@
+// delchunk deletes the chunk at 200, 200
 package main
 
 import (

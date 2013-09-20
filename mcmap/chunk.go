@@ -127,7 +127,7 @@ func (c *Chunk) Biome(x, z int) Biome { return c.biomes[z*ChunkSizeXZ+x] }
 // SetBiome sets the biome at x,z.
 func (c *Chunk) SetBiome(x, z int, bio Biome) { c.biomes[z*ChunkSizeXZ+x] = bio }
 
-// MarkUnused marks the chunk as unused. If all chunks of a superchunk are marked as unused, the superchunk will be unloaded and saved (if needed).
+// MarkUnused marks the chunk as unused. If all chunks of a superchunk are marked as unused, the underlying superchunk will be unloaded and saved (if needed).
 //
 // You must not use the chunk any longer, after you called this function.
 //

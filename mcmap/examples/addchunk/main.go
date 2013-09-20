@@ -1,3 +1,4 @@
+// addchunk adds a chunk at 200, 200 that consists of sandstone.
 package main
 
 import (
