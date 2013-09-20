@@ -57,6 +57,28 @@ type Chunk struct {
 	reg *Region
 }
 
+func newChunk(reg *Region, x, z int) *Chunk {
+	biomes := make([]Biome, ChunkRectXZ)
+	for i := range biomes {
+		biomes[i] = BioUncalculated
+	}
+
+	heightMap := make([]int32, ChunkRectXZ)
+	for i := range heightMap {
+		heightMap[i] = ChunkSizeY - 1
+	}
+
+	return &Chunk{
+		x:         int32(x),
+		z:         int32(z),
+		ts:        time.Now(),
+		blocks:    make([]Block, ChunkSize),
+		biomes:    biomes,
+		heightMap: heightMap,
+		reg:       reg,
+	}
+}
+
 // MarkModified needs to be called, if some data of the chunk was modified.
 func (c *Chunk) MarkModified() { c.modified = true }
 
@@ -118,7 +140,7 @@ func (c *Chunk) RecalcHeightMap() {
 	i := 0
 	for z := 0; z < ChunkSizeXZ; z++ {
 		for x := 0; x < ChunkSizeXZ; x++ {
-			for y := ChunkSizeY-1; y >= 0; y-- {
+			for y := ChunkSizeY - 1; y >= 0; y-- {
 				blkid := c.blocks[calcBlockOffset(x, y, z)].ID
 				if (blkid != BlkAir) && (blkid != BlkGlass) && (blkid != BlkGlassPane) {
 					c.heightMap[i] = int32(y)

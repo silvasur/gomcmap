@@ -11,6 +11,7 @@ import (
 
 var (
 	NotAvailable = errors.New("Chunk or Superchunk not available")
+	AlreadyThere = errors.New("Chunk is already there")
 )
 
 type superchunk struct {
@@ -29,6 +30,8 @@ type Region struct {
 var mcaRegex = regexp.MustCompile(`^r\.([0-9-]+)\.([0-9-]+)\.mca$`)
 
 // OpenRegion opens a region directory. If autosave is true, mcmap will save modified and unloaded chunks automatically to reduce memory usage. You still have to call Save at the end.
+//
+// You can also use OpenRegion to create a new region. Yust make sure the path exists.
 func OpenRegion(path string, autosave bool) (*Region, error) {
 	rv := &Region{
 		path:             path,
@@ -176,11 +179,30 @@ func (reg *Region) cleanSuperchunks(forceSave bool) error {
 	return nil
 }
 
+func (sc *superchunk) loadChunk(reg *Region, rx, rz int) (*Chunk, error) {
+	cPos := XZPos{rx, rz}
+
+	if chunk, ok := sc.chunks[cPos]; ok {
+		return chunk, nil
+	}
+
+	pc, ok := sc.preChunks[cPos]
+	if !ok {
+		return nil, NotAvailable
+	}
+
+	chunk, err := pc.toChunk(reg)
+	if err != nil {
+		return nil, err
+	}
+	sc.chunks[cPos] = chunk
+	return chunk, nil
+}
+
 // Chunk returns the chunk at x, z. If no chunk could be found, the error NotAvailable will be returned. Other errors indicate an internal error (I/O error, file format violated, ...)
 func (reg *Region) Chunk(x, z int) (*Chunk, error) {
 	scx, scz, cx, cz := chunkToSuperchunk(x, z)
 	scPos := XZPos{scx, scz}
-	cPos := XZPos{cx, cz}
 
 	sc, ok := reg.superchunks[scPos]
 	if !ok {
@@ -190,18 +212,9 @@ func (reg *Region) Chunk(x, z int) (*Chunk, error) {
 		sc = reg.superchunks[scPos]
 	}
 
-	chunk, ok := sc.chunks[cPos]
-	if !ok {
-		pc, ok := sc.preChunks[cPos]
-		if !ok {
-			return nil, NotAvailable
-		}
-
-		var err error
-		if chunk, err = pc.toChunk(reg); err != nil {
-			return nil, err
-		}
-		sc.chunks[cPos] = chunk
+	chunk, err := sc.loadChunk(reg, cx, cz)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := reg.cleanSuperchunks(false); err != nil {
@@ -261,6 +274,56 @@ func (reg *Region) AllChunks() <-chan XZPos {
 	}(ch)
 
 	return ch
+}
+
+// NewChunk adds a new, blank chunk. If the Chunk is already there, error AlreadyThere will be returned.
+// Other errors indicate internal errors.
+func (reg *Region) NewChunk(cx, cz int) (*Chunk, error) {
+	scx, scz, rx, rz := chunkToSuperchunk(cx, cz)
+
+	scPos := XZPos{scx, scz}
+
+	var sc *superchunk
+	if reg.superchunksAvail[scPos] {
+		var ok bool
+		if sc, ok = reg.superchunks[scPos]; !ok {
+			if err := reg.loadSuperchunk(scPos); err != nil {
+				return nil, err
+			}
+			sc = reg.superchunks[scPos]
+		}
+	} else {
+		sc = &superchunk{
+			chunks:    make(map[XZPos]*Chunk),
+			preChunks: make(map[XZPos]*preChunk),
+			modified:  true,
+		}
+		reg.superchunksAvail[scPos] = true
+		reg.superchunks[scPos] = sc
+	}
+
+	switch chunk, err := sc.loadChunk(reg, rx, rz); err {
+	case nil:
+		chunk.MarkUnused()
+		return nil, AlreadyThere
+	case NotAvailable:
+	default:
+		return nil, err
+	}
+
+	cPos := XZPos{rx, rz}
+	chunk := newChunk(reg, cx, cz)
+
+	pc, err := chunk.toPreChunk()
+	if err != nil {
+		return nil, err
+	}
+
+	sc.preChunks[cPos] = pc
+	sc.chunks[cPos] = chunk
+	sc.modified = true
+
+	return chunk, nil
 }
 
 // Save saves modified and unused chunks.
