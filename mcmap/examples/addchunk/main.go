@@ -33,6 +33,7 @@ func main() {
 	})
 
 	chunk.RecalcHeightMap()
+	chunk.MarkModified()
 	if err := chunk.MarkUnused(); err != nil {
 		fmt.Fprintf(os.Stderr, "Could not MarkUnused(): %s\n", err)
 		os.Exit(1)
