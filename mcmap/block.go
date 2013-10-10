@@ -130,6 +130,7 @@ const (
 	BlkCakeBlock                  = 92
 	BlkRedstoneRepeaterInactive   = 93
 	BlkRedstoneRepeaterActive     = 94
+	BlkStainedGlass               = 95
 	BlkLockedChest                = 95
 	BlkTrapdoor                   = 96
 	BlkMonsterEgg                 = 97
@@ -195,6 +196,7 @@ const (
 	BlkActivatorRail              = 157
 	BlkDropper                    = 158
 	BlkStainedClay                = 159
+	BlkStainedGlassPane           = 160
 	BlkHayBlock                   = 170
 	BlkCarpet                     = 171
 	BlkHardenedClay               = 172
@@ -303,7 +305,7 @@ var blockNames = map[BlockID]string{
 	BlkCakeBlock:                  "Cake Block",
 	BlkRedstoneRepeaterInactive:   "Redstone Repeater (inactive)",
 	BlkRedstoneRepeaterActive:     "Redstone Repeater (active)",
-	BlkLockedChest:                "Locked Chest",
+	BlkStainedGlass:               "Stained Glass",
 	BlkTrapdoor:                   "Trapdoor",
 	BlkMonsterEgg:                 "Monster Egg",
 	BlkStoneBricks:                "Stone Bricks",
@@ -374,6 +376,7 @@ var blockNames = map[BlockID]string{
 	BlkBlockOfCoal:                "Block of Coal",
 	BlkPackedIce:                  "Packed Ice",
 	BlkLargeFlower:                "Large Flower",
+	BlkStainedGlassPane:           "Stained Glass Pane",
 }
 
 func (b BlockID) String() string {
