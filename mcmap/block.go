@@ -200,6 +200,7 @@ const (
 	BlkWood2                      = 162
 	BlkAcaciaWoodStairs           = 163
 	BlkDarkOakWoodStairs          = 164
+	BlkSlimeBlock                 = 165
 	BlkHayBlock                   = 170
 	BlkCarpet                     = 171
 	BlkHardenedClay               = 172
@@ -383,6 +384,7 @@ var blockNames = map[BlockID]string{
 	BlkWood2:                      "Wood 2",
 	BlkAcaciaWoodStairs:           "Acacia Wood Stairs",
 	BlkDarkOakWoodStairs:          "Dark Oak Wood Stairs",
+	BlkSlimeBlock:                 "Slime Block",
 }
 
 func (b BlockID) String() string {
