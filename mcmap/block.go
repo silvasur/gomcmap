@@ -208,6 +208,7 @@ const (
 	BlkPackedIce                  = 174
 	BlkLargeFlower                = 175
 	BlkBarrier                    = 166
+	BlkIronTrapdoor               = 167
 
 	// Aliases
 	BlkRose      = BlkFlower
@@ -388,6 +389,7 @@ var blockNames = map[BlockID]string{
 	BlkDarkOakWoodStairs:          "Dark Oak Wood Stairs",
 	BlkSlimeBlock:                 "Slime Block",
 	BlkBarrier:                    "Barrier",
+	BlkIronTrapdoor:               "Iron Trapdoor",
 }
 
 func (b BlockID) String() string {
