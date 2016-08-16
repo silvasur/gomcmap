@@ -4,7 +4,7 @@ A library for reading and modifying Minecraft maps.
 
 ## Install
 
-	go get github.com/kch42/gomcmap/mcmap
+	go get github.com/silvasur/gomcmap/mcmap
 
 ## Examples
 

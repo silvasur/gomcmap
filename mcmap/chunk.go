@@ -2,7 +2,7 @@ package mcmap
 
 import (
 	"errors"
-	"github.com/kch42/gonbt/nbt"
+	"github.com/silvasur/gonbt/nbt"
 	"time"
 )
 

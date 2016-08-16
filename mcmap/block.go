@@ -1,7 +1,7 @@
 package mcmap
 
 import (
-	"github.com/kch42/gonbt/nbt"
+	"github.com/silvasur/gonbt/nbt"
 )
 
 type BlockID uint16

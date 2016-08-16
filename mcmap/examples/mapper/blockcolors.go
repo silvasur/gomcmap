@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/kch42/gomcmap/mcmap"
+	"github.com/silvasur/gomcmap/mcmap"
 )
 
 type rgb uint32

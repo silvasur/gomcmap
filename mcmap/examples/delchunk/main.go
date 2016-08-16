@@ -4,7 +4,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/kch42/gomcmap/mcmap"
+	"github.com/silvasur/gomcmap/mcmap"
 	"os"
 )
 

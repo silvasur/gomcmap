@@ -3,7 +3,7 @@ package mcmap
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/kch42/kagus"
+	"github.com/silvasur/kagus"
 	"io"
 	"time"
 )
